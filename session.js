@@ -4,7 +4,7 @@ module.exports.runCrawler = async () => {
     const puppeteer = require('puppeteer');
 
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         timeout: 999999999
     });
     const page = await browser.newPage();
