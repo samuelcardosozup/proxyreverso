@@ -1,11 +1,14 @@
 const { runCrawler } = require('./session');
+const httpProxy = require('http-proxy');
+
+// variavel com os cookies
+let filteredCookies;
 
 runCrawler().then(cookies => {
-  const filteredCookies = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(['; ']);
+  filteredCookies = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(['; ']);
   console.log(`Proxying using ... ${filteredCookies}`);
-  
-  const httpProxy = require('http-proxy');
-  const headers = { 'Cookie': filteredCookies }
+
+  // Configuracao do proxy
   const proxy = httpProxy.createProxyServer({
       target:'https://prod-useast-a.online.tableau.com/',
       changeOrigin: true,
@@ -19,19 +22,36 @@ runCrawler().then(cookies => {
       },
       cookiePathRewrite: {
         "*": "/"
-      },
-      headers: headers
+      }
   }).listen(8082);
 
+  // Validacao da sessao de tempos em tempos
+  setInterval(() => {
+    runCrawler().then(cookies => {
+      filteredCookies = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(['; ']);
+    });
+  }, 10000)
+  
+  // Configuracao dos requests
   proxy.on('proxyReq', (proxyReq, req, res, options) => {
-    // Aqui, você pode fazer um cache de recursos estáticos e também interceptar cabeçalhos
-    // para fazer uma autenticação (de tempos em tempos) no cognito
-    // https://www.npmjs.com/package/cognito-jwt-token-validator
-    // Caso o token não seja válido, basta acionar:
+    // Adicionando o cookie
+    try {
+      proxyReq.setHeader('Cookie', filteredCookies);
+    } catch(err) {
+      // silent excetion (para os cookies ja enviados)
+    }
+
+    // TODO: cache recursos estáticos (redis ou memória do servidor)
+
+    // TODO: recuperar a URL original de chamada e o JWT (autenticacao de tempos em tempos)
+    // https://www.npmjs.com/package/cognito-jwt-token-validator 
     // res.end();
+
+    // TODO: recuperar o id do hospital e verificar se aquele usuario tem acesso ao hospital
   });
 
   proxy.on('proxyRes', (proxyRes, req, res) => {
+    // Removendo header que impedia a visualizacao do response no iframe
     delete proxyRes.headers['x-frame-options'];
   });
 
