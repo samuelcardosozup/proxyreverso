@@ -30,7 +30,7 @@ runCrawler().then(cookies => {
     runCrawler().then(cookies => {
       filteredCookies = cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join(['; ']);
     });
-  }, 10000)
+  }, 1000 * 60 * 60)
   
   // Configuracao dos requests
   proxy.on('proxyReq', (proxyReq, req, res, options) => {
